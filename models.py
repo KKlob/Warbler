@@ -48,6 +48,17 @@ class Likes(db.Model):
         unique=True
     )
 
+    @classmethod
+    def check_like(cls, u_id, m_id):
+        like = Likes.query.filter_by(user_id=u_id, message_id=m_id).first()
+        return like
+
+    @classmethod
+    def add_like(cls, u_id, m_id):
+        like = Likes(user_id=u_id, message_id=m_id)
+        db.session.add(like)
+        return like
+
 
 class User(db.Model):
     """User in the system."""
