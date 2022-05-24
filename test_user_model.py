@@ -7,6 +7,8 @@
 
 import os
 from unittest import TestCase
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import SQLAlchemyError
 
 from models import db, User, Message, Follows
 
@@ -39,15 +41,45 @@ class UserModelTestCase(TestCase):
         Message.query.delete()
         Follows.query.delete()
 
+        # Sample Data Below
+
+        # User table
+        u = User(
+            email="test@test.com",
+            username="testuser",
+            password="password"
+        )
+        u2 = User(
+            email="test1@test.com",
+            username="test1user",
+            password="HASHED1_PASSWORD"
+        )
+        db.session.add(u, u2)
+
+        db.session.commit()
+        # Message table
+        m = Message(
+            text="testtext",
+            user_id=u.id
+        )
+        
+        db.session.commit()
+        #Follows Table
+        u.followers.append(u2)
+
+        db.session.commit()
+
+        # End of Sample Data
+
         self.client = app.test_client()
 
     def test_user_model(self):
         """Does basic model work?"""
 
         u = User(
-            email="test@test.com",
-            username="testuser",
-            password="HASHED_PASSWORD"
+            email="test2@test.com",
+            username="test2user",
+            password="HASHED2_PASSWORD"
         )
 
         db.session.add(u)
@@ -56,3 +88,37 @@ class UserModelTestCase(TestCase):
         # User should have no messages & no followers
         self.assertEqual(len(u.messages), 0)
         self.assertEqual(len(u.followers), 0)
+
+    def test_user_repr(self):
+        """Does __repr__ work as expected?"""
+
+        u = User.query.first()
+        self.assertEqual(str(u), f"<User #{u.id}: testuser, test@test.com>")
+
+    def test_user_is_followed(self):
+        """Does is_following() successfully detect when user1 is following user2?"""
+
+        u = User.query.filter_by(username="testuser").first()
+        u2 = User.query.filter_by(username="test1user").first()
+
+        self.assertTrue(u.is_followed_by(u2))
+        self.assertFalse(u.is_following(u2))
+        self.assertFalse(u2.is_followed_by(u))
+        self.assertTrue(u2.is_following(u))
+
+    def test_user_signup(self):
+        """Does User.create successfullly create a new user given valid creds?"""
+
+        User.query.filter_by(username="testuser").delete()
+        u = User.signup("testuser", "test@test.com", "password", "/static/images/default-pic.png")
+        db.session.commit()
+
+        u = User.query.filter_by(username="testuser").first()
+        self.assertTrue(u)
+
+        self.assertRaises(SQLAlchemyError, User.signup, "testuser", "test@test2.com", "HASHED2_PW", "somepic.jpg")
+            
+        u2 = User.query.filter_by(email="test@test2.com").first()
+        self.assertEqual(u2, None)
+
+    
