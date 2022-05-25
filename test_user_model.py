@@ -24,15 +24,9 @@ os.environ['DATABASE_URL'] = "postgresql:///warbler-test"
 
 from app import app
 
-# Create our tables (we do this here, so we only create the tables
-# once for all tests --- in each test, we'll delete the data
-# and create fresh new clean test data
-
-db.create_all()
-
 
 class UserModelTestCase(TestCase):
-    """Test views for messages."""
+    """Test User model."""
 
     def setUp(self):
         """Create test client, add sample data."""
