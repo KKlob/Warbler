@@ -106,7 +106,7 @@ class User(db.Model):
     )
 
     # links users and messages to access each easily
-    messages = db.relationship('Message')
+    messages = db.relationship('Message', cascade='all, delete')
 
     # How many followers a user has
     followers = db.relationship(
@@ -212,7 +212,7 @@ class Message(db.Model):
         nullable=False,
     )
 
-    user = db.relationship('User')
+    user = db.relationship('User', cascade='all, delete')
 
 
 def connect_db(app):
