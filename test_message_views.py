@@ -39,8 +39,8 @@ class MessageViewTestCase(TestCase):
     def setUp(self):
         """Create test client, add sample data."""
 
-        User.query.delete()
-        Message.query.delete()
+        db.drop_all()
+        db.create_all()
 
         self.client = app.test_client()
 
@@ -48,7 +48,16 @@ class MessageViewTestCase(TestCase):
                                     email="test@test.com",
                                     password="testuser",
                                     image_url=None)
+        self.testuser.id = 11
 
+        db.session.commit()
+
+    def add_messages(self):
+        """Add messages to the db"""
+        m1 = Message(text="first message", user_id=11)
+        m2 = Message(text="second message", user_id=11)
+
+        db.session.add_all([m1, m2])
         db.session.commit()
 
     def test_add_message(self):
@@ -69,5 +78,36 @@ class MessageViewTestCase(TestCase):
             # Make sure it redirects
             self.assertEqual(resp.status_code, 302)
 
-            msg = Message.query.one()
+            msg = Message.query.first()
             self.assertEqual(msg.text, "Hello")
+
+    def test_get_message(self):
+        """Test route to get a single message"""
+
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+
+            self.add_messages()
+            msg = Message.query.first()
+            
+            resp = c.get(f'/messages/{msg.id}')
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("first message", str(resp.data))
+
+    def test_delete_message(self):
+        """Test route to delete a message"""
+
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.testuser.id
+            
+            self.add_messages()
+
+            msg = Message.query.first()
+
+            resp = c.post(f'/messages/{msg.id}/delete')
+
+            self.assertEqual(resp.status_code, 302)
+            self.assertNotIn("first message", str(resp.data))
